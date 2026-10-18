@@ -1,3 +1,4 @@
+import html
 import os
 import random
 import requests
@@ -23,7 +24,6 @@ def search_quirky_topics():
       "Authorization": f"Bearer {ORTHOGONAL_API_KEY}",
       "Content-Type": "application/json",
   }
-  # Sử dụng công cụ search (serper) thông qua Orthogonal API
   payload = {"api": "serper", "path": "/search", "query": {"q": chosen_query}}
 
   try:
@@ -40,10 +40,10 @@ def search_quirky_topics():
     return []
 
 
-def generate_markdown_post(search_results):
+def generate_html_post(search_results):
   if not search_results:
     return (
-        "🤖 **Bản tin Kỳ quặc Internet Hôm nay**\n\n"
+        "🤖 <b>Bản tin Kỳ quặc Internet Hôm nay</b>\n\n"
         "Hôm nay hệ thống chưa tìm thấy dữ liệu mới từ mạng, agent sẽ thử lại"
         " vào khung giờ tiếp theo!"
     )
@@ -54,20 +54,24 @@ def generate_markdown_post(search_results):
   snippet = item.get("snippet", "Không có mô tả chi tiết.")
   link = item.get("link", "https://google.com")
 
-  markdown_content = f"""🧩 **Chủ đề Kỳ quặc Internet Hôm nay**
+  # Làm sạch các ký tự HTML đặc biệt để tránh lỗi cú pháp
+  safe_title = html.escape(title)
+  safe_snippet = html.escape(snippet)
 
-### 📌 Chuyện gì xảy ra:
-{title}
+  html_content = f"""🧩 <b>Chủ đề Kỳ quặc Internet Hôm nay</b>
 
-*Mô tả:* {snippet}
+<b>📌 Chuyện gì xảy ra:</b>
+{safe_title}
 
-### 💡 Điều gì thú vị?
+<i>Mô tả:</i> {safe_snippet}
+
+<b>💡 Điều gì thú vị?</b>
 Câu chuyện này thu hút sự tò mò bởi những khía cạnh độc lạ, phản ánh một góc khuất kỳ thú hoặc sự sáng tạo khó hiểu của con người trên không gian mạng.
 
-### 🔗 Nguồn đáng đọc tiếp:
-* [{title}]({link})
+<b>🔗 Nguồn đáng đọc tiếp:</b>
+• <a href="{link}">{safe_title}</a>
 """
-  return markdown_content
+  return html_content
 
 
 def send_telegram_message(text):
@@ -75,12 +79,12 @@ def send_telegram_message(text):
   payload = {
       "chat_id": TELEGRAM_CHAT_ID,
       "text": text,
-      "parse_mode": "Markdown",
+      "parse_mode": "HTML",  # Sử dụng chế độ HTML an toàn hơn cho dữ liệu web
       "disable_web_page_preview": False,
   }
   response = requests.post(url, json=payload)
   if response.status_code == 200:
-    print("Đã gửi tin nhắn Markdown lên Telegram thành công!")
+    print("Đã gửi tin nhắn HTML lên Telegram thành công!")
   else:
     print(f"Lỗi gửi Telegram: {response.status_code} - {response.text}")
 
@@ -88,6 +92,6 @@ def send_telegram_message(text):
 if __name__ == "__main__":
   print("Đang tìm kiếm chủ đề kỳ quặc...")
   results = search_quirky_topics()
-  post_content = generate_markdown_post(results)
+  post_content = generate_html_post(results)
   print("Đang gửi nội dung lên Telegram...")
   send_telegram_message(post_content)
